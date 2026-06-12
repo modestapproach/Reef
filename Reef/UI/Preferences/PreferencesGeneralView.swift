@@ -104,12 +104,12 @@ struct PreferencesGeneralView: View {
 
                 Toggle("Treat browser profiles as separate apps", isOn: $separateBrowserProfiles)
 
-                Toggle("Open a new window (⌘N) if none exist", isOn: $openNewWindowIfNoneExist)
+                Toggle("Open a new window if none exist", isOn: $openNewWindowIfNoneExist)
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Instant switching focuses the bound app right away, and each repeat press jumps straight to its next window — no switcher panel.")
                     Text("With separate browser profiles, binding Chrome, Edge, Brave, or Vivaldi captures the active profile, and its number only switches between that profile's windows.")
-                    Text("Opening a new window sends the app ⌘N when you switch to it and it has no windows open.")
+                    Text("Opening a new window simulates clicking the app's Dock icon when you switch to it and it has no windows open (falling back to ⌘N).")
                 }
             }
         }

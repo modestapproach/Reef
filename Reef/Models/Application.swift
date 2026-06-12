@@ -224,17 +224,22 @@ class Application {
             return true
         }
 
-        // Running with no windows: activate, and — when the opt-in toggle is
-        // on — send the app ⌘N, the universal "new window" key equivalent, so
-        // the binding lands on a usable window, not a bare focused app.
-        // (Relaunching via NSWorkspace does not deliver a reopen event to a
-        // running app.)
+        // Running with no windows: when the opt-in toggle is on, ask the app
+        // to open one the way a Dock click does — the reopen Apple Event —
+        // which AppKit and Electron apps answer by creating their default
+        // window. Apps that ignore reopen get ⌘N as a fallback.
+        // (Relaunching via NSWorkspace does not deliver a reopen event.)
         if isRunning {
             activate()
 
             if UserDefaults.standard.bool(forKey: "openNewWindowIfNoneExist") {
                 try? await Task.sleep(nanoseconds: 300_000_000)
-                postNewWindowShortcut()
+                sendReopenEvent()
+
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                if !hasOnScreenWindows() {
+                    postNewWindowShortcut()
+                }
             }
             return true
         }
@@ -244,6 +249,37 @@ class Application {
             return true
         } catch {
             return false
+        }
+    }
+
+    // Sends the reopen Apple Event — exactly what the Dock sends when an
+    // app's icon is clicked. This carries no data, so it doesn't require
+    // per-app Automation consent.
+    private func sendReopenEvent() {
+        guard let bundleIdentifier else { return }
+
+        let target = NSAppleEventDescriptor(bundleIdentifier: bundleIdentifier)
+        let event = NSAppleEventDescriptor(
+            eventClass: AEEventClass(kCoreEventClass),
+            eventID: AEEventID(kAEReopenApplication),
+            targetDescriptor: target,
+            returnID: AEReturnID(kAutoGenerateReturnID),
+            transactionID: AETransactionID(kAnyTransactionID)
+        )
+        try? event.sendEvent(options: [.noReply], timeout: 3)
+    }
+
+    // CGWindowList sees new windows immediately, unlike the AX window list,
+    // so use it to decide whether the reopen event actually produced one.
+    private func hasOnScreenWindows() -> Bool {
+        guard let pid else { return false }
+        guard let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+
+        return info.contains {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == pid
+                && ($0[kCGWindowLayer as String] as? Int) == 0
         }
     }
 
