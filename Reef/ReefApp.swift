@@ -53,6 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static private(set) var instance: AppDelegate!
     static var profileManager: ProfileManager!
     static private(set) var modifierManager: ModifierManager!
+    static private(set) var capsLockManager: CapsLockRemapManager!
     
     private var cycleController: CyclePanelController!
     private var exposeController: ExposePanelController!
@@ -61,6 +62,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         AppDelegate.modifierManager = ModifierManager()
+        AppDelegate.capsLockManager = CapsLockRemapManager()
+        AppDelegate.capsLockManager.apply()
 
         cycleController = CyclePanelController()
         exposeController = ExposePanelController()
@@ -81,5 +84,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         AppDelegate.profileManager.saveNow()
+        AppDelegate.capsLockManager.tearDownForQuit()
     }
 }
