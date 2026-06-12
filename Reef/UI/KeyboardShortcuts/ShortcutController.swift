@@ -25,32 +25,42 @@ extension KeyboardShortcuts.Name {
     static let profileShortcuts: [KeyboardShortcuts.Name] = (0...9).map { number in
         Self("profile\(number)")
     }
+
+    static let exposeShortcuts: [KeyboardShortcuts.Name] = (0...9).map { number in
+        Self("expose\(number)")
+    }
 }
 
 @MainActor
 final class ShortcutController {
     private let cycleController: CyclePanelController
+    private let exposeController: ExposePanelController
     private let profileManager: ProfileManager
-    
-    init(_ cycleController: CyclePanelController, _ profileManager: ProfileManager) {
+
+    init(_ cycleController: CyclePanelController, _ exposeController: ExposePanelController, _ profileManager: ProfileManager) {
         self.cycleController = cycleController
+        self.exposeController = exposeController
         self.profileManager = profileManager
-        
+
         setupShortcuts()
     }
-    
+
     private func setupShortcuts() {
         for number in 0...9 {
             KeyboardShortcuts.onKeyUp(for: .bindShortcuts[number]) {
                 self.handleBind(number: number)
             }
-            
+
             KeyboardShortcuts.onKeyDown(for: .activateShortcuts[number]) {
                 self.handleActivate(number: number)
             }
-            
+
             KeyboardShortcuts.onKeyDown(for: .profileShortcuts[number]) {
                 self.handleProfile(number: number)
+            }
+
+            KeyboardShortcuts.onKeyDown(for: .exposeShortcuts[number]) {
+                self.handleExpose(number: number)
             }
         }
     }
@@ -139,6 +149,22 @@ final class ShortcutController {
         }
     }
     
+    // Exposé mode: a grid of the binding's windows for visual hunting. Repeat
+    // presses cycle the selection; releasing Control (or clicking) activates.
+    private func handleExpose(number: Int) {
+        guard let binding = profileManager.application(for: number) else {
+            NSSound.beep()
+            return
+        }
+
+        if exposeController.panel.isVisible, exposeController.isShowingExpose(for: binding) {
+            exposeController.cycleSelection()
+            return
+        }
+
+        exposeController.show(for: binding)
+    }
+
     func handleProfile(number: Int) {
         guard let profileID = profileManager.profileID(forNumber: number) else {
             NSSound.beep()
