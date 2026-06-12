@@ -15,6 +15,7 @@ struct PreferencesShortcutsView: View {
         return ModifierManager()
     }()
     @State private var showingResetConfirmation = false
+    @State private var showingExposeInfo = false
 
     private var disabledCapabilityNote: String? {
         var disabledCapabilities: [String] = []
@@ -107,8 +108,38 @@ struct PreferencesShortcutsView: View {
                     }
 
                     GridRow {
-                        Text(verbatim: "Window exposé")
-                            .frame(minWidth: 150, alignment: .leading)
+                        HStack(spacing: 4) {
+                            Text(verbatim: "Window exposé")
+
+                            Button {
+                                showingExposeInfo.toggle()
+                            } label: {
+                                Image(systemName: "info.circle")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $showingExposeInfo, arrowEdge: .bottom) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("While the exposé grid is open")
+                                        .font(.headline)
+
+                                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                                        GridRow { Text("↩").fontWeight(.medium); Text("focus the selected window") }
+                                        GridRow { Text("N").fontWeight(.medium); Text("open a new window (in the bound browser profile, if any)") }
+                                        GridRow { Text("W").fontWeight(.medium); Text("close the selected window") }
+                                        GridRow { Text("Q").fontWeight(.medium); Text("quit the app") }
+                                        GridRow { Text("esc").fontWeight(.medium); Text("cancel") }
+                                    }
+
+                                    Text("Tap the chord to browse with the arrow keys; hold it and release to switch immediately.")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(12)
+                                .frame(width: 320)
+                            }
+                        }
+                        .frame(minWidth: 150, alignment: .leading)
                         Toggle("", isOn: $modifierManager.exposeControl).toggleStyle(.checkbox)
                         Toggle("", isOn: $modifierManager.exposeOption).toggleStyle(.checkbox)
                         Toggle("", isOn: $modifierManager.exposeShift).toggleStyle(.checkbox)
