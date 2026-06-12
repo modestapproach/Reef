@@ -10,12 +10,18 @@ import SwiftUI
 
 @MainActor
 final class ExposePanelController: NSObject {
-    private(set) var panel: CyclePanel!
+    private(set) var panel: ExposeOverlayPanel!
     private let state = ExposeState()
     private var flagsMonitor: Any?
     private var keyDownMonitor: Any?
     private var currentApplication: Application?
     private var captureTask: Task<Void, Never>?
+    private var shownAt: Date?
+
+    // A quick tap of the chord releases its modifiers as the overlay is still
+    // appearing; ignore releases inside this window so a tap means "browse"
+    // while a deliberate hold-and-release still commits the selection.
+    private let tapGracePeriod: TimeInterval = 0.3
 
     override init() {
         super.init()
@@ -23,14 +29,20 @@ final class ExposePanelController: NSObject {
     }
 
     private func createPanel() {
-        let contentRect = NSRect(x: 0, y: 0, width: 600, height: 400)
-        panel = CyclePanel(contentRect: contentRect)
+        panel = ExposeOverlayPanel()
+        panel.delegate = self
 
-        let contentView = ExposeView(state: state) { [weak self] index in
-            guard let self else { return }
-            self.state.selectedIndex = index
-            self.activateSelectedWindow()
-        }
+        let contentView = ExposeView(
+            state: state,
+            onSelect: { [weak self] index in
+                guard let self else { return }
+                self.state.selectedIndex = index
+                self.activateSelectedWindow()
+            },
+            onCancel: { [weak self] in
+                self?.hideExpose()
+            }
+        )
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -48,6 +60,8 @@ final class ExposePanelController: NSObject {
         currentApplication = application
         state.setApplication(application)
 
+        print("Expose: \(application.displayTitle) — \(state.windows.count) windows, screenAccess=\(state.hasScreenAccess)")
+
         // Nothing to hunt through — behave like instant switching with no windows.
         guard !state.windows.isEmpty else {
             hideExpose()
@@ -60,8 +74,9 @@ final class ExposePanelController: NSObject {
             return
         }
 
-        updatePanelSize()
-        panel.center()
+        let screen = screenForOverlay()
+        shownAt = Date()
+        panel.setFrame(screen.frame, display: true)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         installFlagsMonitor()
@@ -94,6 +109,44 @@ final class ExposePanelController: NSObject {
         return currentApplication.title == application.title
     }
 
+    // Overlay goes on the screen the user is looking at: the one with the
+    // focused window, falling back to the screen under the mouse.
+    private func screenForOverlay() -> NSScreen {
+        if let focusedFrame = Window.getFrontWindow()?.cgWindowID.flatMap(windowFrame(for:)),
+           let screen = NSScreen.screens.first(where: { $0.frame.intersects(focusedFrame) }) {
+            return screen
+        }
+
+        let mouseLocation = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
+            return screen
+        }
+
+        return NSScreen.main ?? NSScreen.screens[0]
+    }
+
+    private func windowFrame(for windowID: CGWindowID) -> NSRect? {
+        guard let info = CGWindowListCopyWindowInfo([.optionIncludingWindow], windowID) as? [[String: Any]],
+              let boundsDict = info.first?[kCGWindowBounds as String] as? [String: CGFloat] else {
+            return nil
+        }
+
+        // CGWindow bounds are top-left origin; flip into AppKit's coordinate space.
+        let bounds = NSRect(
+            x: boundsDict["X"] ?? 0,
+            y: boundsDict["Y"] ?? 0,
+            width: boundsDict["Width"] ?? 0,
+            height: boundsDict["Height"] ?? 0
+        )
+        let primaryHeight = NSScreen.screens[0].frame.height
+        return NSRect(
+            x: bounds.origin.x,
+            y: primaryHeight - bounds.origin.y - bounds.height,
+            width: bounds.width,
+            height: bounds.height
+        )
+    }
+
     private func startThumbnailCapture() {
         captureTask?.cancel()
 
@@ -105,31 +158,6 @@ final class ExposePanelController: NSObject {
                 state.thumbnails[windowID] = image
             }
         }
-    }
-
-    private func updatePanelSize() {
-        let columns = CGFloat(max(1, state.columns))
-        let rows = CGFloat(max(1, state.rows))
-
-        let gridWidth = columns * ExposeMetrics.cardWidth
-            + (columns - 1) * ExposeMetrics.gridSpacing
-            + ExposeMetrics.gridPadding * 2
-        let gridHeight = rows * ExposeMetrics.cardHeight
-            + (rows - 1) * ExposeMetrics.gridSpacing
-            + ExposeMetrics.gridPadding * 2
-        let desiredContentHeight = ExposeMetrics.headerHeight + 1 + gridHeight
-
-        let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
-            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let maxWidth = visibleFrame.width * 0.85
-        let maxHeight = visibleFrame.height * 0.85
-
-        let contentWidth = min(gridWidth, maxWidth)
-        let contentHeight = min(desiredContentHeight, maxHeight)
-
-        let targetContentRect = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
-        let targetFrameSize = panel.frameRect(forContentRect: targetContentRect).size
-        panel.setFrame(NSRect(origin: panel.frame.origin, size: targetFrameSize), display: true, animate: false)
     }
 
     func activateSelectedWindow() {
@@ -146,6 +174,7 @@ final class ExposePanelController: NSObject {
         panel.orderOut(nil)
         state.reset()
         currentApplication = nil
+        shownAt = nil
     }
 
     private func installFlagsMonitor() {
@@ -154,10 +183,16 @@ final class ExposePanelController: NSObject {
         flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
 
-            let controlPressed = event.modifierFlags.contains(.control)
+            // Activate once every modifier of the exposé chord is released —
+            // the chord is configurable and may not include Control.
+            let chord = AppDelegate.modifierManager?.exposeModifiers ?? [.control]
+            let pressed = event.modifierFlags.intersection([.control, .option, .shift, .command])
 
-            // Control was released
-            if !controlPressed {
+            if !chord.isEmpty, pressed.intersection(chord).isEmpty {
+                if let shownAt = self.shownAt, Date().timeIntervalSince(shownAt) < self.tapGracePeriod {
+                    return event
+                }
+
                 Task { @MainActor in
                     self.activateSelectedWindow()
                 }
@@ -235,5 +270,13 @@ final class ExposePanelController: NSObject {
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
         }
+    }
+}
+
+extension ExposePanelController: NSWindowDelegate {
+    // Clicking another app (or anything that steals key) dismisses the overlay
+    // and tears down its monitors.
+    func windowDidResignKey(_ notification: Notification) {
+        hideExpose()
     }
 }
