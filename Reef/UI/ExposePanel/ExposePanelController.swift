@@ -185,6 +185,17 @@ final class ExposePanelController: NSObject {
         application?.quit()
     }
 
+    // N: open a new window (in the bound profile, for browser bindings) and
+    // leave the overlay so it lands on the fresh window.
+    private func openNewWindow() {
+        let application = currentApplication
+        hideExpose()
+
+        Task { @MainActor in
+            await application?.openNewWindow()
+        }
+    }
+
     private func hideExpose() {
         captureTask?.cancel()
         captureTask = nil
@@ -253,6 +264,11 @@ final class ExposePanelController: NSObject {
             case 12: // Q — quit the app
                 Task { @MainActor in
                     self.quitApplication()
+                }
+                return nil
+            case 45: // N — open a new window
+                Task { @MainActor in
+                    self.openNewWindow()
                 }
                 return nil
             case 123: // Left arrow

@@ -45,7 +45,7 @@ struct ExposeView: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
 
-            Text("↩ focus   W close window   Q quit app   esc cancel")
+            Text("↩ focus   N new window   W close window   Q quit app   esc cancel")
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.55))
 

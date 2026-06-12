@@ -262,6 +262,21 @@ class Application {
         }
     }
 
+    // Opens a new window regardless of how many exist: profile bindings get
+    // one in their profile; everything else gets ⌘N after activation (the
+    // reopen event only opens a window when the app has none).
+    func openNewWindow() async {
+        if let browserProfileName,
+           let profileDirectory = BrowserProfile.profileDirectory(named: browserProfileName, bundleIdentifier: bundleIdentifier),
+           await openBrowserProfileWindow(profileDirectory: profileDirectory) {
+            return
+        }
+
+        activate()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        postNewWindowShortcut()
+    }
+
     // Apps that open a new window faster via ⌘N than via the reopen event.
     private static let newWindowShortcutFirst: Set<String> = [
         "com.apple.finder"
