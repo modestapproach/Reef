@@ -63,6 +63,12 @@ final class ExposeState: ObservableObject {
         selectedIndex = (selectedIndex + 1) % windows.count
     }
 
+    func removeWindow(at index: Int) {
+        guard windows.indices.contains(index) else { return }
+        windows.remove(at: index)
+        selectedIndex = min(selectedIndex, max(0, windows.count - 1))
+    }
+
     func moveSelection(byColumns deltaColumns: Int, byRows deltaRows: Int) {
         guard !windows.isEmpty else { return }
 

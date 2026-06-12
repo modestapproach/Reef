@@ -138,6 +138,11 @@ class Application {
         refreshRunningApplication() != nil
     }
 
+    // Politely asks the app to quit (the standard quit Apple Event).
+    func quit() {
+        refreshRunningApplication()?.terminate()
+    }
+
     func activate(options: NSApplication.ActivationOptions = []) {
         if let runningApplication = refreshRunningApplication() {
             // App is running, just activate it

@@ -38,7 +38,17 @@ class Window: Identifiable {
             try? self.application.reopen()
         }
     }
-    
+
+    // Presses the window's close button via accessibility — the same as
+    // clicking the red traffic light, so per-window confirmation UI still runs.
+    func close() {
+        guard let closeButton: AXUIElement = element.getAttributeValue(.closeButton) else {
+            return
+        }
+
+        try? closeButton.performAction(.press)
+    }
+
     static func getFrontWindow() -> Window? {
         guard let frontApplication = Application.getFrontApplication() else {
             return nil

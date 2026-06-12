@@ -166,6 +166,25 @@ final class ExposePanelController: NSObject {
         window?.focus()
     }
 
+    // W: close the selected window and stay in the overlay.
+    private func closeSelectedWindow() {
+        guard let window = state.currentWindow else { return }
+
+        window.close()
+        state.removeWindow(at: state.selectedIndex)
+
+        if state.windows.isEmpty {
+            hideExpose()
+        }
+    }
+
+    // Q: quit the whole app and leave the overlay.
+    private func quitApplication() {
+        let application = currentApplication
+        hideExpose()
+        application?.quit()
+    }
+
     private func hideExpose() {
         captureTask?.cancel()
         captureTask = nil
@@ -224,6 +243,16 @@ final class ExposePanelController: NSObject {
             case 36, 76: // Return / Enter
                 Task { @MainActor in
                     self.activateSelectedWindow()
+                }
+                return nil
+            case 13: // W — close selected window
+                Task { @MainActor in
+                    self.closeSelectedWindow()
+                }
+                return nil
+            case 12: // Q — quit the app
+                Task { @MainActor in
+                    self.quitApplication()
                 }
                 return nil
             case 123: // Left arrow
