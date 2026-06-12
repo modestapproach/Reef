@@ -224,9 +224,28 @@ class Application {
             return true
         }
 
-        // Official fallback: if the app is already running, just focus/activate it.
+        // Running with no windows: when the opt-in toggle is on, ask the app
+        // to open one the way a Dock click does — the reopen Apple Event —
+        // which AppKit and Electron apps answer by creating their default
+        // window. Apps that ignore reopen get ⌘N as a fallback.
+        // (Relaunching via NSWorkspace does not deliver a reopen event.)
         if isRunning {
             activate()
+
+            if UserDefaults.standard.bool(forKey: "openNewWindowIfNoneExist") {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+
+                // Apps in the override set respond to ⌘N noticeably faster
+                // than to reopen (Finder), so they get the shortcut first;
+                // either way the other mechanism remains the fallback.
+                let shortcutFirst = Self.newWindowShortcutFirst.contains(bundleIdentifier ?? "")
+                shortcutFirst ? postNewWindowShortcut() : sendReopenEvent()
+
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                if !hasOnScreenWindows() {
+                    shortcutFirst ? sendReopenEvent() : postNewWindowShortcut()
+                }
+            }
             return true
         }
 
@@ -236,6 +255,59 @@ class Application {
         } catch {
             return false
         }
+    }
+
+    // Apps that open a new window faster via ⌘N than via the reopen event.
+    private static let newWindowShortcutFirst: Set<String> = [
+        "com.apple.finder"
+    ]
+
+    // Sends the reopen Apple Event — exactly what the Dock sends when an
+    // app's icon is clicked. This carries no data, so it doesn't require
+    // per-app Automation consent.
+    private func sendReopenEvent() {
+        guard let bundleIdentifier else { return }
+
+        let target = NSAppleEventDescriptor(bundleIdentifier: bundleIdentifier)
+        let event = NSAppleEventDescriptor(
+            eventClass: AEEventClass(kCoreEventClass),
+            eventID: AEEventID(kAEReopenApplication),
+            targetDescriptor: target,
+            returnID: AEReturnID(kAutoGenerateReturnID),
+            transactionID: AETransactionID(kAnyTransactionID)
+        )
+        try? event.sendEvent(options: [.noReply], timeout: 3)
+    }
+
+    // CGWindowList sees new windows immediately, unlike the AX window list,
+    // so use it to decide whether the reopen event actually produced one.
+    private func hasOnScreenWindows() -> Bool {
+        guard let pid else { return false }
+        guard let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+
+        return info.contains {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == pid
+                && ($0[kCGWindowLayer as String] as? Int) == 0
+        }
+    }
+
+    // Posts ⌘N to the app's process. Posting events is covered by the
+    // Accessibility permission Reef already requires.
+    private func postNewWindowShortcut() {
+        guard let pid else { return }
+
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyN: CGKeyCode = 45
+
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyN, keyDown: true)
+        keyDown?.flags = .maskCommand
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyN, keyDown: false)
+        keyUp?.flags = .maskCommand
+
+        keyDown?.postToPid(pid)
+        keyUp?.postToPid(pid)
     }
 
     // Chromium browsers forward the command line of a second instance to the

@@ -16,7 +16,7 @@ enum CyclePanelAction {
         case .launchApp:
             return "Launch app"
         case .openWindow:
-            return "Focus app"
+            return "Open new window"
         }
     }
 }
