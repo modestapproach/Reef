@@ -234,11 +234,16 @@ class Application {
 
             if UserDefaults.standard.bool(forKey: "openNewWindowIfNoneExist") {
                 try? await Task.sleep(nanoseconds: 300_000_000)
-                sendReopenEvent()
+
+                // Apps in the override set respond to ⌘N noticeably faster
+                // than to reopen (Finder), so they get the shortcut first;
+                // either way the other mechanism remains the fallback.
+                let shortcutFirst = Self.newWindowShortcutFirst.contains(bundleIdentifier ?? "")
+                shortcutFirst ? postNewWindowShortcut() : sendReopenEvent()
 
                 try? await Task.sleep(nanoseconds: 700_000_000)
                 if !hasOnScreenWindows() {
-                    postNewWindowShortcut()
+                    shortcutFirst ? sendReopenEvent() : postNewWindowShortcut()
                 }
             }
             return true
@@ -251,6 +256,11 @@ class Application {
             return false
         }
     }
+
+    // Apps that open a new window faster via ⌘N than via the reopen event.
+    private static let newWindowShortcutFirst: Set<String> = [
+        "com.apple.finder"
+    ]
 
     // Sends the reopen Apple Event — exactly what the Dock sends when an
     // app's icon is clicked. This carries no data, so it doesn't require
