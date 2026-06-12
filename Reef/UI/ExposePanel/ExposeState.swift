@@ -63,6 +63,30 @@ final class ExposeState: ObservableObject {
         selectedIndex = (selectedIndex + 1) % windows.count
     }
 
+    func removeWindow(at index: Int) {
+        guard windows.indices.contains(index) else { return }
+        windows.remove(at: index)
+        selectedIndex = min(selectedIndex, max(0, windows.count - 1))
+    }
+
+    // Re-reads the window list keeping existing thumbnails, and moves the
+    // selection to the first window that wasn't there before (if any).
+    func refreshWindows(_ application: Application, selectingNewFrom previousIDs: Set<CGWindowID>) {
+        windows = application.getWindows()
+            .sorted { ($0.cgWindowID ?? 0) < ($1.cgWindowID ?? 0) }
+
+        let currentIDs = Set(windows.compactMap(\.cgWindowID))
+        thumbnails = thumbnails.filter { currentIDs.contains($0.key) }
+
+        if let newIndex = windows.firstIndex(where: { window in
+            window.cgWindowID.map { !previousIDs.contains($0) } ?? false
+        }) {
+            selectedIndex = newIndex
+        } else {
+            selectedIndex = min(selectedIndex, max(0, windows.count - 1))
+        }
+    }
+
     func moveSelection(byColumns deltaColumns: Int, byRows deltaRows: Int) {
         guard !windows.isEmpty else { return }
 

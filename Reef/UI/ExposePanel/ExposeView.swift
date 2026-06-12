@@ -45,6 +45,10 @@ struct ExposeView: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
 
+            Text("↩ focus   N new window   W close window   Q quit app   esc cancel")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.55))
+
             if !state.hasScreenAccess {
                 Text("Enable Screen Recording for Reef in System Settings → Privacy & Security to see window previews")
                     .font(.caption)

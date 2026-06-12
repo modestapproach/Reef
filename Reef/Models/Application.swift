@@ -138,6 +138,11 @@ class Application {
         refreshRunningApplication() != nil
     }
 
+    // Politely asks the app to quit (the standard quit Apple Event).
+    func quit() {
+        refreshRunningApplication()?.terminate()
+    }
+
     func activate(options: NSApplication.ActivationOptions = []) {
         if let runningApplication = refreshRunningApplication() {
             // App is running, just activate it
@@ -257,6 +262,24 @@ class Application {
         }
     }
 
+    // Opens a new window regardless of how many exist: profile bindings get
+    // one in their profile; everything else gets ⌘N (the reopen event only
+    // opens a window when the app has none). With activating false the window
+    // is created without stealing focus, so an overlay can stay key.
+    func openNewWindow(activating: Bool = true) async {
+        if let browserProfileName,
+           let profileDirectory = BrowserProfile.profileDirectory(named: browserProfileName, bundleIdentifier: bundleIdentifier),
+           await openBrowserProfileWindow(profileDirectory: profileDirectory, activates: activating) {
+            return
+        }
+
+        if activating {
+            activate()
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
+        postNewWindowShortcut()
+    }
+
     // Apps that open a new window faster via ⌘N than via the reopen event.
     private static let newWindowShortcutFirst: Set<String> = [
         "com.apple.finder"
@@ -313,11 +336,11 @@ class Application {
     // Chromium browsers forward the command line of a second instance to the
     // running one, so launching with --profile-directory opens a new window in
     // that profile whether or not the browser is already running.
-    private func openBrowserProfileWindow(profileDirectory: String) async -> Bool {
+    private func openBrowserProfileWindow(profileDirectory: String, activates: Bool = true) async -> Bool {
         guard let bundleUrl else { return false }
 
         let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
+        configuration.activates = activates
         configuration.createsNewApplicationInstance = true
         configuration.arguments = ["--profile-directory=\(profileDirectory)"]
 
