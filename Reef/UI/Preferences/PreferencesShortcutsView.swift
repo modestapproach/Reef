@@ -19,17 +19,17 @@ struct PreferencesShortcutsView: View {
 
     private var disabledCapabilityNote: String? {
         var disabledCapabilities: [String] = []
+        if !modifierManager.exposeEnabled {
+            disabledCapabilities.append("exposé switching")
+        }
         if !modifierManager.activateEnabled {
-            disabledCapabilities.append("app switching")
+            disabledCapabilities.append("fast switching")
         }
         if !modifierManager.bindEnabled {
             disabledCapabilities.append("binding")
         }
         if !modifierManager.profileEnabled {
             disabledCapabilities.append("profile switching")
-        }
-        if !modifierManager.exposeEnabled {
-            disabledCapabilities.append("window exposé")
         }
 
         guard !disabledCapabilities.isEmpty else {
@@ -81,35 +81,8 @@ struct PreferencesShortcutsView: View {
                     Divider()
 
                     GridRow {
-                        Text(verbatim: "Switch app")
-                            .frame(minWidth: 150, alignment: .leading)
-                        Toggle("", isOn: $modifierManager.activateControl).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.activateOption).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.activateShift).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.activateCommand).toggleStyle(.checkbox)
-                    }
-
-                    GridRow {
-                        Text(verbatim: "Switch profile")
-                            .frame(minWidth: 150, alignment: .leading)
-                        Toggle("", isOn: $modifierManager.profileControl).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.profileOption).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.profileShift).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.profileCommand).toggleStyle(.checkbox)
-                    }
-
-                    GridRow {
-                        Text(verbatim: "Bind app")
-                            .frame(minWidth: 150, alignment: .leading)
-                        Toggle("", isOn: $modifierManager.bindControl).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.bindOption).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.bindShift).toggleStyle(.checkbox)
-                        Toggle("", isOn: $modifierManager.bindCommand).toggleStyle(.checkbox)
-                    }
-
-                    GridRow {
                         HStack(spacing: 4) {
-                            Text(verbatim: "Window exposé")
+                            Text(verbatim: "Switch app - Exposé")
 
                             Button {
                                 showingExposeInfo.toggle()
@@ -145,6 +118,33 @@ struct PreferencesShortcutsView: View {
                         Toggle("", isOn: $modifierManager.exposeShift).toggleStyle(.checkbox)
                         Toggle("", isOn: $modifierManager.exposeCommand).toggleStyle(.checkbox)
                     }
+
+                    GridRow {
+                        Text(verbatim: "Switch app - Fast")
+                            .frame(minWidth: 150, alignment: .leading)
+                        Toggle("", isOn: $modifierManager.activateControl).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.activateOption).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.activateShift).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.activateCommand).toggleStyle(.checkbox)
+                    }
+
+                    GridRow {
+                        Text(verbatim: "Switch profile")
+                            .frame(minWidth: 150, alignment: .leading)
+                        Toggle("", isOn: $modifierManager.profileControl).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.profileOption).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.profileShift).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.profileCommand).toggleStyle(.checkbox)
+                    }
+
+                    GridRow {
+                        Text(verbatim: "Bind app")
+                            .frame(minWidth: 150, alignment: .leading)
+                        Toggle("", isOn: $modifierManager.bindControl).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.bindOption).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.bindShift).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.bindCommand).toggleStyle(.checkbox)
+                    }
                 }
                 .padding(.vertical, 8)
 
@@ -175,10 +175,10 @@ struct PreferencesShortcutsView: View {
             Text(verbatim: """
             Modifiers will be reset to
 
-            Activate:\t\t⌃
+            Exposé:\t\t⌃ + ⌘
+            Fast:\t\t⌃
             Profile:\t\t⌃ + ⌥
             Bind:\t\t⌃ + ⌥ + ⇧
-            Exposé:\t\t⌃ + ⌘
             """)
             .font(.system(.body, design: .monospaced))
         }

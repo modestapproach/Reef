@@ -88,13 +88,15 @@ final class ShortcutController {
         print("Bound \(binding) to \(number)")
     }
 
+    // "Switch app - Fast": always instant, no panel.
     private func handleActivate(number: Int) {
         guard let binding = profileManager.application(for: number) else {
             NSSound.beep()
             return
         }
 
-        // If panel is already visible, cycle if same app; otherwise switch to the newly requested app.
+        // The list panel may be open (exposé chord in list mode); repeat
+        // presses cycle it rather than switching behind it.
         if cycleController.panel.isVisible {
             if cycleController.isShowingSwitcher(for: binding) {
                 cycleController.cycleNext()
@@ -105,15 +107,7 @@ final class ShortcutController {
             return
         }
 
-        if UserDefaults.standard.bool(forKey: "instantWindowSwitching") {
-            instantActivate(binding)
-            return
-        }
-
-        // Already on this app: start at second window
-        let startIndex = binding.isFrontmost() ? 1 : 0
-
-        cycleController.showSwitcher(for: binding, startIndex: startIndex)
+        instantActivate(binding)
     }
 
     // Instant mode: no panel. The first press focuses the app; repeat presses
@@ -149,11 +143,30 @@ final class ShortcutController {
         }
     }
     
-    // Exposé mode: a grid of the binding's windows for visual hunting. Repeat
-    // presses cycle the selection; releasing Control (or clicking) activates.
+    // "Switch app - Exposé": a grid of the binding's windows for visual
+    // hunting. Repeat presses cycle the selection; releasing the chord (or
+    // clicking) activates. With "Use List instead of Exposé UI" on, the
+    // classic switcher panel shows instead of the grid.
     private func handleExpose(number: Int) {
         guard let binding = profileManager.application(for: number) else {
             NSSound.beep()
+            return
+        }
+
+        if UserDefaults.standard.bool(forKey: "useListInsteadOfExpose") {
+            if cycleController.panel.isVisible {
+                if cycleController.isShowingSwitcher(for: binding) {
+                    cycleController.cycleNext()
+                } else {
+                    cycleController.showSwitcher(for: binding)
+                }
+
+                return
+            }
+
+            // Already on this app: start at second window
+            let startIndex = binding.isFrontmost() ? 1 : 0
+            cycleController.showSwitcher(for: binding, startIndex: startIndex)
             return
         }
 

@@ -179,16 +179,19 @@ final class CyclePanelController: NSObject {
         
         flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
-            
-            let controlPressed = event.modifierFlags.contains(.control)
-            
-            // Control was released
-            if !controlPressed {
+
+            // The panel opens from the exposé chord (list mode), which is
+            // configurable and may not include Control — commit once every
+            // modifier of that chord is released.
+            let chord = AppDelegate.modifierManager?.exposeModifiers ?? [.control]
+            let pressed = event.modifierFlags.intersection([.control, .option, .shift, .command])
+
+            if !chord.isEmpty, pressed.intersection(chord).isEmpty {
                 Task { @MainActor in
                     self.activateSelectedWindow()
                 }
             }
-            
+
             return event
         }
     }
