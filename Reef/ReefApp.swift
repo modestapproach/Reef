@@ -66,8 +66,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         exposeController = ExposePanelController()
         shortcutManager = ShortcutController(cycleController, exposeController, AppDelegate.profileManager)
         windowManager = PreferencesController()
-        
+
         NSApp.setActivationPolicy(.accessory)
+
+        // Prompt for Accessibility on launch when untrusted. This also makes
+        // macOS register the current bundle in the Accessibility list, so the
+        // user only has to flip the toggle — important for ad-hoc local builds,
+        // where each rebuild changes the signature and orphans the old entry.
+        if !AXIsProcessTrusted() {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

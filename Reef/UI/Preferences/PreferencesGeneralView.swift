@@ -35,13 +35,13 @@ struct PreferencesGeneralView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Accessibility Permission Required")
                             .fontWeight(.medium)
-                        Text("System Settings → Privacy & Security → Accessibility")
+                        Text("System Settings → Privacy & Security → Accessibility. If the toggle is already on, remove Reef (−) and re-add it.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Button("Open Settings") {
                         openAccessibilitySettings()
                     }
@@ -59,17 +59,23 @@ struct PreferencesGeneralView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Screen Recording Permission Required")
                             .fontWeight(.medium)
-                        Text("Needed for window exposé previews — System Settings → Privacy & Security → Screen & System Audio Recording")
+                        Text("Needed for window exposé previews — System Settings → Privacy & Security → Screen & System Audio Recording. macOS only applies the grant after a relaunch.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
-                    Button("Open Settings") {
-                        openScreenRecordingSettings()
+                    VStack(spacing: 6) {
+                        Button("Open Settings") {
+                            openScreenRecordingSettings()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button("Relaunch Reef") {
+                            relaunchReef()
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
                 }
             }
 
@@ -104,7 +110,7 @@ struct PreferencesGeneralView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 320 + (hasAccessibilityPermission ? 0 : 65) + (hasScreenRecordingPermission ? 0 : 75))
+        .frame(height: 320 + (hasAccessibilityPermission ? 0 : 70) + (hasScreenRecordingPermission ? 0 : 100))
         .onReceive(timer) { _ in
             // Poll for permission changes
             hasAccessibilityPermission = AXIsProcessTrusted()
@@ -122,6 +128,18 @@ struct PreferencesGeneralView: View {
         // Open System Settings to the Privacy & Security > Screen Recording pane
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
         NSWorkspace.shared.open(url)
+    }
+
+    // The Screen Recording verdict is cached per process launch, so a fresh
+    // grant only takes effect in a new instance.
+    private func relaunchReef() {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
+            }
+        }
     }
     
     private func setLaunchAtLogin(enabled: Bool) {
