@@ -18,6 +18,10 @@ final class ExposePanelController: NSObject {
     private var captureTask: Task<Void, Never>?
     private var shownAt: Date?
 
+    // True while N is creating a window: the new window may briefly steal
+    // key, which must not dismiss the overlay.
+    private var suppressResignHide = false
+
     // A quick tap of the chord releases its modifiers as the overlay is still
     // appearing; ignore releases inside this window so a tap means "browse"
     // while a deliberate hold-and-release still commits the selection.
@@ -150,8 +154,10 @@ final class ExposePanelController: NSObject {
     private func startThumbnailCapture() {
         captureTask?.cancel()
 
-        let windowIDs = state.windows.compactMap(\.cgWindowID)
+        // Only capture windows that don't have a thumbnail yet, so refreshes
+        // (e.g. after N adds a window) don't re-shoot the whole grid.
         let state = self.state
+        let windowIDs = state.windows.compactMap(\.cgWindowID).filter { state.thumbnails[$0] == nil }
 
         captureTask = Task {
             await WindowThumbnailProvider.capture(windowIDs: windowIDs) { windowID, image in
@@ -185,14 +191,37 @@ final class ExposePanelController: NSObject {
         application?.quit()
     }
 
-    // N: open a new window (in the bound profile, for browser bindings) and
-    // leave the overlay so it lands on the fresh window.
+    // N: open a new window (in the bound profile, for browser bindings)
+    // without leaving the overlay — the grid grows in place and the new
+    // window becomes the selection.
     private func openNewWindow() {
-        let application = currentApplication
-        hideExpose()
+        guard let application = currentApplication else { return }
+
+        suppressResignHide = true
+        let previousIDs = Set(state.windows.compactMap(\.cgWindowID))
 
         Task { @MainActor in
-            await application?.openNewWindow()
+            defer { self.suppressResignHide = false }
+
+            await application.openNewWindow(activating: false)
+
+            // Wait for the new window to surface in the AX list (up to ~3s).
+            for _ in 0..<15 {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                let ids = Set(application.getWindows().compactMap(\.cgWindowID))
+                if !ids.subtracting(previousIDs).isEmpty { break }
+            }
+
+            // The overlay may have been dismissed while waiting (Esc, release).
+            guard self.currentApplication != nil, self.panel.isVisible else { return }
+
+            self.state.refreshWindows(application, selectingNewFrom: previousIDs)
+
+            // Re-take key in case the new window grabbed focus anyway.
+            self.panel.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+            self.startThumbnailCapture()
         }
     }
 
@@ -320,8 +349,10 @@ final class ExposePanelController: NSObject {
 
 extension ExposePanelController: NSWindowDelegate {
     // Clicking another app (or anything that steals key) dismisses the overlay
-    // and tears down its monitors.
+    // and tears down its monitors — except while N is creating a window, which
+    // can briefly steal key itself.
     func windowDidResignKey(_ notification: Notification) {
+        guard !suppressResignHide else { return }
         hideExpose()
     }
 }
