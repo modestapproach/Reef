@@ -2,7 +2,7 @@
 //  ExposeState.swift
 //  Reef
 //
-//  State for the per-app exposé grid.
+//  State for the per-app exposé overlay.
 //
 
 import AppKit
@@ -14,9 +14,12 @@ final class ExposeState: ObservableObject {
     @Published var windows: [Window] = []
     @Published var thumbnails: [CGWindowID: CGImage] = [:]
     @Published var selectedIndex: Int = 0
-    @Published var columns: Int = 1
+    @Published var hasScreenAccess: Bool = true
 
     private(set) var appIcon: NSImage?
+
+    // At most this many tiles per row; rows are balanced from it.
+    private static let maxTilesPerRow = 4
 
     func setApplication(_ application: Application) {
         applicationTitle = application.displayTitle
@@ -26,14 +29,28 @@ final class ExposeState: ObservableObject {
         // Stable creation-order, matching instant switching.
         windows = application.getWindows()
             .sorted { ($0.cgWindowID ?? 0) < ($1.cgWindowID ?? 0) }
-        columns = Self.columnCount(for: windows.count)
         thumbnails = [:]
         selectedIndex = 0
+        hasScreenAccess = WindowThumbnailProvider.hasScreenCaptureAccess
     }
 
     var rows: Int {
         guard !windows.isEmpty else { return 0 }
-        return (windows.count + columns - 1) / columns
+        return (windows.count + Self.maxTilesPerRow - 1) / Self.maxTilesPerRow
+    }
+
+    var columns: Int {
+        guard !windows.isEmpty else { return 1 }
+        return (windows.count + rows - 1) / rows
+    }
+
+    // Window indices chunked into balanced rows for tiling.
+    var rowChunks: [[Int]] {
+        let indices = Array(windows.indices)
+        guard !indices.isEmpty else { return [] }
+        return stride(from: 0, to: indices.count, by: columns).map {
+            Array(indices[$0..<min($0 + columns, indices.count)])
+        }
     }
 
     var currentWindow: Window? {
@@ -59,16 +76,6 @@ final class ExposeState: ObservableObject {
         windows = []
         thumbnails = [:]
         selectedIndex = 0
-        columns = 1
         appIcon = nil
-    }
-
-    static func columnCount(for windowCount: Int) -> Int {
-        switch windowCount {
-        case ...1: return 1
-        case 2...4: return 2
-        case 5...9: return 3
-        default: return 4
-        }
     }
 }

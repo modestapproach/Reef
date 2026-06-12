@@ -58,7 +58,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var exposeController: ExposePanelController!
     private var shortcutManager: ShortcutController!
     private var windowManager: PreferencesController!
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         AppDelegate.modifierManager = ModifierManager()
