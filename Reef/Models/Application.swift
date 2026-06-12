@@ -224,20 +224,40 @@ class Application {
             return true
         }
 
-        // Running with no windows: opening the app again delivers the reopen
-        // event — the same thing that makes a Dock click open a fresh window —
-        // so the binding lands on a usable window, not a bare focused app.
-        // Not running: this launches it. Either way a window appears.
+        // Running with no windows: activate, then send the app ⌘N — the
+        // universal "new window" key equivalent — so the binding lands on a
+        // usable window, not a bare focused app. (Relaunching via NSWorkspace
+        // does not deliver a reopen event to a running app.)
+        if isRunning {
+            activate()
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            postNewWindowShortcut()
+            return true
+        }
+
         do {
             _ = try await reopen(configuration: Self.defaultOpenConfiguration(activates: true))
             return true
         } catch {
-            if isRunning {
-                activate()
-                return true
-            }
             return false
         }
+    }
+
+    // Posts ⌘N to the app's process. Posting events is covered by the
+    // Accessibility permission Reef already requires.
+    private func postNewWindowShortcut() {
+        guard let pid else { return }
+
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyN: CGKeyCode = 45
+
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyN, keyDown: true)
+        keyDown?.flags = .maskCommand
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyN, keyDown: false)
+        keyUp?.flags = .maskCommand
+
+        keyDown?.postToPid(pid)
+        keyUp?.postToPid(pid)
     }
 
     // Chromium browsers forward the command line of a second instance to the
