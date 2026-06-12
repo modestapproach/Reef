@@ -224,14 +224,18 @@ class Application {
             return true
         }
 
-        // Running with no windows: activate, then send the app ⌘N — the
-        // universal "new window" key equivalent — so the binding lands on a
-        // usable window, not a bare focused app. (Relaunching via NSWorkspace
-        // does not deliver a reopen event to a running app.)
+        // Running with no windows: activate, and — when the opt-in toggle is
+        // on — send the app ⌘N, the universal "new window" key equivalent, so
+        // the binding lands on a usable window, not a bare focused app.
+        // (Relaunching via NSWorkspace does not deliver a reopen event to a
+        // running app.)
         if isRunning {
             activate()
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            postNewWindowShortcut()
+
+            if UserDefaults.standard.bool(forKey: "openNewWindowIfNoneExist") {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                postNewWindowShortcut()
+            }
             return true
         }
 
