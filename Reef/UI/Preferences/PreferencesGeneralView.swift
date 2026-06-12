@@ -18,8 +18,9 @@ struct PreferencesGeneralView: View {
     @AppStorage("separateBrowserProfiles") private var separateBrowserProfiles = false
     
     @State private var hasAccessibilityPermission = AXIsProcessTrusted()
-    
-    // Timer to poll for accessibility permission changes
+    @State private var hasScreenRecordingPermission = CGPreflightScreenCaptureAccess()
+
+    // Timer to poll for permission changes
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
@@ -47,7 +48,32 @@ struct PreferencesGeneralView: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            
+
+            // Screen Recording Permission Warning (window exposé previews)
+            if !hasScreenRecordingPermission {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                        .imageScale(.large)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Screen Recording Permission Required")
+                            .fontWeight(.medium)
+                        Text("Needed for window exposé previews — System Settings → Privacy & Security → Screen & System Audio Recording")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button("Open Settings") {
+                        openScreenRecordingSettings()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+
+
             Section {
                 Toggle("Launch Reef at login", isOn: $launchOnLogin)
                     .onChange(of: launchOnLogin) { _, newValue in
@@ -78,16 +104,23 @@ struct PreferencesGeneralView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: hasAccessibilityPermission ? 320 : 385)
+        .frame(height: 320 + (hasAccessibilityPermission ? 0 : 65) + (hasScreenRecordingPermission ? 0 : 75))
         .onReceive(timer) { _ in
             // Poll for permission changes
             hasAccessibilityPermission = AXIsProcessTrusted()
+            hasScreenRecordingPermission = CGPreflightScreenCaptureAccess()
         }
     }
-    
+
     private func openAccessibilitySettings() {
         // Open System Settings to the Privacy & Security > Accessibility pane
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        NSWorkspace.shared.open(url)
+    }
+
+    private func openScreenRecordingSettings() {
+        // Open System Settings to the Privacy & Security > Screen Recording pane
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
         NSWorkspace.shared.open(url)
     }
     
