@@ -21,12 +21,13 @@ class Window: Identifiable {
         self.application = application
     }
     
+    // Title as reported by the accessibility API, without the application-name fallback.
+    var rawTitle: String? {
+        self.element.getAttributeValue(.title)
+    }
+
     var title: String {
-        if let title: String = self.element.getAttributeValue(.title) {
-            return title
-        }
-        
-        return application.title
+        rawTitle ?? application.title
     }
     
     func focus() {

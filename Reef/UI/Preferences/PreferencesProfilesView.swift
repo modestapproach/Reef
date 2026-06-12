@@ -199,12 +199,12 @@ struct ProfileDetailView: View {
                         Text("\(number):")
                             .frame(width: 30, alignment: .leading)
                         
-                        if let bundleIdentifier = profileManager.bundleIdentifier(for: number, in: profile) {
-                            if let app = Application(bundleIdentifier: bundleIdentifier) {
-                                Text(app.title)
+                        if let binding = profileManager.bundleIdentifier(for: number, in: profile) {
+                            if let app = profileManager.application(for: number, in: profile) {
+                                Text(app.displayTitle)
                                     .foregroundStyle(.secondary)
                             } else {
-                                Text(bundleIdentifier)
+                                Text(binding)
                                     .foregroundStyle(.secondary)
                             }
                             

@@ -13,6 +13,10 @@ class Application {
     var title: String
     var element: AXUIElement?
 
+    // When set, this instance represents a single browser profile: window
+    // lists are filtered to that profile and new windows open in it.
+    var browserProfileName: String?
+
     var runningApplication: NSRunningApplication?
     var pid: pid_t?
     var bundleIdentifier: String?
@@ -97,10 +101,39 @@ class Application {
 //        return false
 //    }
     
+    var displayTitle: String {
+        guard let browserProfileName else { return title }
+        return "\(title) – \(browserProfileName)"
+    }
+
     func focus() {
+        if browserProfileName != nil {
+            // Focus the profile's frontmost window (or open one) rather than
+            // activating the whole browser.
+            Task { @MainActor in
+                _ = await self.performNoWindowAction()
+            }
+            return
+        }
+
         self.activate()
     }
-    
+
+    func isFrontmost() -> Bool {
+        guard let frontApp = Application.getFrontApplication() else { return false }
+
+        if let frontBundleID = frontApp.bundleIdentifier, let bundleIdentifier {
+            guard frontBundleID == bundleIdentifier else { return false }
+        } else {
+            guard frontApp.title == title else { return false }
+        }
+
+        guard let browserProfileName else { return true }
+
+        guard let focusedTitle = frontApp.getFocusedWindow()?.rawTitle else { return false }
+        return BrowserProfile.profileName(fromWindowTitle: focusedTitle, bundleIdentifier: bundleIdentifier) == browserProfileName
+    }
+
     var isRunning: Bool {
         refreshRunningApplication() != nil
     }
@@ -183,18 +216,43 @@ class Application {
             existingWindow.focus()
             return true
         }
-        
+
+        // For a profile binding, open a new window in that specific profile.
+        if let browserProfileName,
+           let profileDirectory = BrowserProfile.profileDirectory(named: browserProfileName, bundleIdentifier: bundleIdentifier),
+           await openBrowserProfileWindow(profileDirectory: profileDirectory) {
+            return true
+        }
+
         // Official fallback: if the app is already running, just focus/activate it.
         if isRunning {
             activate()
             return true
         }
-        
+
         do {
             _ = try await reopen(configuration: Self.defaultOpenConfiguration(activates: true))
             return true
         } catch {
             return false
+        }
+    }
+
+    // Chromium browsers forward the command line of a second instance to the
+    // running one, so launching with --profile-directory opens a new window in
+    // that profile whether or not the browser is already running.
+    private func openBrowserProfileWindow(profileDirectory: String) async -> Bool {
+        guard let bundleUrl else { return false }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        configuration.createsNewApplicationInstance = true
+        configuration.arguments = ["--profile-directory=\(profileDirectory)"]
+
+        return await withCheckedContinuation { continuation in
+            NSWorkspace.shared.openApplication(at: bundleUrl, configuration: configuration) { _, error in
+                continuation.resume(returning: error == nil)
+            }
         }
     }
     
@@ -248,7 +306,14 @@ class Application {
            lastWindow.title == "Finder" {
             windows.removeLast()
         }
-        
+
+        if let browserProfileName {
+            windows = windows.filter { window in
+                guard let windowTitle = window.rawTitle else { return false }
+                return BrowserProfile.profileName(fromWindowTitle: windowTitle, bundleIdentifier: bundleIdentifier) == browserProfileName
+            }
+        }
+
         return windows
     }
     

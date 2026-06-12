@@ -114,12 +114,12 @@ struct MenuBarView: View {
             let number = getNumber(for: i, order: numberOrder)
             if let binding = profileManager.application(for: number, in: currentProfile) {
                 if modifierManager.activateEnabled {
-                    Button("\(binding.title)") {
+                    Button("\(binding.displayTitle)") {
                         binding.focus()
                     }
                     .keyboardShortcut(KeyEquivalent(Character("\(number)")), modifiers: modifierManager.activateEventModifiers)
                 } else {
-                    Button("\(binding.title)") {
+                    Button("\(binding.displayTitle)") {
                         binding.focus()
                     }
                 }

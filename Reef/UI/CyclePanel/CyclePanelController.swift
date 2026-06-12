@@ -118,7 +118,11 @@ final class CyclePanelController: NSObject {
     
     func isShowingSwitcher(for application: Application) -> Bool {
         guard let currentApplication else { return false }
-        
+
+        guard currentApplication.browserProfileName == application.browserProfileName else {
+            return false
+        }
+
         if let currentBundleID = currentApplication.bundleIdentifier,
            let targetBundleID = application.bundleIdentifier {
             return currentBundleID == targetBundleID

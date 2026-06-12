@@ -14,6 +14,8 @@ struct PreferencesGeneralView: View {
 //    @AppStorage("hideMenubarIcon") private var hideMenubarIcon = false
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("defaultNumberOrder") private var defaultNumberOrder = "rightHanded"
+    @AppStorage("instantWindowSwitching") private var instantWindowSwitching = false
+    @AppStorage("separateBrowserProfiles") private var separateBrowserProfiles = false
     
     @State private var hasAccessibilityPermission = AXIsProcessTrusted()
     
@@ -63,9 +65,20 @@ struct PreferencesGeneralView: View {
             } footer: {
                 Text("Number order sets the order in which numbers are displayed in the menubar")
             }
+
+            Section {
+                Toggle("Switch windows instantly", isOn: $instantWindowSwitching)
+
+                Toggle("Treat browser profiles as separate apps", isOn: $separateBrowserProfiles)
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Instant switching focuses the bound app right away, and each repeat press jumps straight to its next window — no switcher panel.")
+                    Text("With separate browser profiles, binding Chrome, Edge, Brave, or Vivaldi captures the active profile, and its number only switches between that profile's windows.")
+                }
+            }
         }
         .formStyle(.grouped)
-        .frame(height: hasAccessibilityPermission ? 140 : 205)
+        .frame(height: hasAccessibilityPermission ? 320 : 385)
         .onReceive(timer) { _ in
             // Poll for permission changes
             hasAccessibilityPermission = AXIsProcessTrusted()

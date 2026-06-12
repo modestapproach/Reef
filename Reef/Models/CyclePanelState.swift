@@ -68,7 +68,7 @@ final class CyclePanelState: ObservableObject {
     }
     
     func setApplication(_ application: Application) {
-        self.applicationTitle = application.title
+        self.applicationTitle = application.displayTitle
         
         let windows = application.getWindows()
         if windows.isEmpty {

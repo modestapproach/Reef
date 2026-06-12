@@ -66,17 +66,24 @@ final class ShortcutController {
             return
         }
 
-        profileManager.bind(bundleIdentifier: bundleIdentifier, to: number)
+        var binding = bundleIdentifier
+        if UserDefaults.standard.bool(forKey: "separateBrowserProfiles"),
+           let windowTitle = application.getFocusedWindow()?.rawTitle,
+           let profileName = BrowserProfile.profileName(fromWindowTitle: windowTitle, bundleIdentifier: bundleIdentifier) {
+            binding = BrowserProfile.encodeBinding(bundleIdentifier: bundleIdentifier, profileName: profileName)
+        }
 
-        print("Bound \(application.title) to \(number)")
+        profileManager.bind(bundleIdentifier: binding, to: number)
+
+        print("Bound \(binding) to \(number)")
     }
-    
+
     private func handleActivate(number: Int) {
         guard let binding = profileManager.application(for: number) else {
             NSSound.beep()
             return
         }
-        
+
         // If panel is already visible, cycle if same app; otherwise switch to the newly requested app.
         if cycleController.panel.isVisible {
             if cycleController.isShowingSwitcher(for: binding) {
@@ -84,19 +91,52 @@ final class ShortcutController {
             } else {
                 cycleController.showSwitcher(for: binding)
             }
-            
+
             return
         }
 
-        // Determine starting index
-        var startIndex = 0
-        if let frontApp = Application.getFrontApplication(),
-           frontApp.title == binding.title {
-            // Already on this app, start at second window
-            startIndex = 1
+        if UserDefaults.standard.bool(forKey: "instantWindowSwitching") {
+            instantActivate(binding)
+            return
         }
-        
+
+        // Already on this app: start at second window
+        let startIndex = binding.isFrontmost() ? 1 : 0
+
         cycleController.showSwitcher(for: binding, startIndex: startIndex)
+    }
+
+    // Instant mode: no panel. The first press focuses the app; repeat presses
+    // jump straight to its next window.
+    private func instantActivate(_ application: Application) {
+        let windows = application.getWindows()
+
+        guard !windows.isEmpty else {
+            Task { @MainActor in
+                let success = await application.performNoWindowAction()
+                if !success {
+                    NSSound.beep()
+                }
+            }
+            return
+        }
+
+        guard application.isFrontmost() else {
+            windows.first?.focus()
+            return
+        }
+
+        // Cycle in a stable order (window IDs are creation-ordered) so repeated
+        // presses visit every window instead of bouncing between the top two.
+        let orderedWindows = windows.sorted { ($0.cgWindowID ?? 0) < ($1.cgWindowID ?? 0) }
+        let focusedID = application.getFocusedWindow()?.cgWindowID
+
+        if let focusedID,
+           let currentIndex = orderedWindows.firstIndex(where: { $0.cgWindowID == focusedID }) {
+            orderedWindows[(currentIndex + 1) % orderedWindows.count].focus()
+        } else {
+            orderedWindows.first?.focus()
+        }
     }
     
     func handleProfile(number: Int) {

@@ -49,6 +49,20 @@ In this way, Reef gives every app its own 'Alt-Tab'.
 
 Note that window switching is scoped to your current [macOS space](https://support.apple.com/en-ca/guide/mac-help/mh14112/mac).
 
+### Browser profiles
+
+Enable **Treat browser profiles as separate apps** in **Reef Preferences → General** to bind individual browser profiles instead of the browser as a whole.
+
+With this option on, pressing the bind shortcut while a Chrome (or Edge, Brave, Chromium, Vivaldi) window is focused binds that window's profile. The number then only switches between that profile's windows, and you can bind other profiles of the same browser to other numbers. If the profile has no open windows, Reef opens a new window in that profile.
+
+Note: this relies on the browser showing the profile name in its window titles, which Chromium-based browsers do once more than one profile exists.
+
+### Instant switching
+
+Prefer skipping the switcher panel? Enable **Switch windows instantly** in **Reef Preferences → General**.
+
+In this mode, pressing a bound number immediately focuses that app, and pressing it again jumps straight to the app's next window — no panel, no waiting.
+
 ### Customization
 
 You can customize the modifiers for switching applications and profiles, and for binding different applications in **Reef Preferences → Shortcuts**.

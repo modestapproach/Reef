@@ -112,10 +112,17 @@ final class ProfileManager: ObservableObject {
     }
 
     func application(for slot: Int, in profile: Profile? = nil) -> Application? {
-        guard let bundleIdentifier = bundleIdentifier(for: slot, in: profile) else {
+        guard let binding = bundleIdentifier(for: slot, in: profile) else {
             return nil
         }
-        return Application(bundleIdentifier: bundleIdentifier)
+
+        let decoded = BrowserProfile.decodeBinding(binding)
+        guard let application = Application(bundleIdentifier: decoded.bundleIdentifier) else {
+            return nil
+        }
+
+        application.browserProfileName = decoded.profileName
+        return application
     }
 
     func saveNow() {
