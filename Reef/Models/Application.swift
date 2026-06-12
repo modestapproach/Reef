@@ -224,16 +224,18 @@ class Application {
             return true
         }
 
-        // Official fallback: if the app is already running, just focus/activate it.
-        if isRunning {
-            activate()
-            return true
-        }
-
+        // Running with no windows: opening the app again delivers the reopen
+        // event — the same thing that makes a Dock click open a fresh window —
+        // so the binding lands on a usable window, not a bare focused app.
+        // Not running: this launches it. Either way a window appears.
         do {
             _ = try await reopen(configuration: Self.defaultOpenConfiguration(activates: true))
             return true
         } catch {
+            if isRunning {
+                activate()
+                return true
+            }
             return false
         }
     }
