@@ -18,6 +18,9 @@ struct PreferencesView: View {
             
             PreferencesShortcutsView()
                 .tabItem { Label("Shortcuts", systemImage: "command") }
+
+            PreferencesCapsLockView()
+                .tabItem { Label("Caps Lock", systemImage: "capslock") }
         }
         .frame(width: 650)
     }
