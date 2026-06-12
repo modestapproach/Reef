@@ -94,10 +94,39 @@ enum BrowserProfile {
             return nil
         }
 
-        for (directory, info) in infoCache {
-            if let info = info as? [String: Any],
-               let name = info["name"] as? String,
-               name == profileName {
+        let profiles: [(directory: String, info: [String: Any])] = infoCache.compactMap { directory, info in
+            (info as? [String: Any]).map { (directory, $0) }
+        }
+
+        // Window titles don't always show the Local State "name": signed-in
+        // profiles appear as "GaiaFirstName (LocalName)" — e.g. local name
+        // "WorkCCA" with Gaia name "Ted Dessert" titles as "Ted (WorkCCA)".
+        // Match in priority passes, because a Gaia first name (pass 3) can
+        // collide with another profile's local name (pass 1).
+        let passes: [([String: Any]) -> [String] ] = [
+            { info in
+                [info["name"] as? String].compactMap { $0 }
+            },
+            { info in
+                guard let name = info["name"] as? String else { return [] }
+                let gaiaName = info["gaia_name"] as? String ?? ""
+                let givenName = info["gaia_given_name"] as? String
+                    ?? gaiaName.components(separatedBy: " ").first ?? ""
+                var composites: [String] = []
+                if !givenName.isEmpty { composites.append("\(givenName) (\(name))") }
+                if !gaiaName.isEmpty { composites.append("\(gaiaName) (\(name))") }
+                return composites
+            },
+            { info in
+                let gaiaName = info["gaia_name"] as? String ?? ""
+                let givenName = info["gaia_given_name"] as? String
+                    ?? gaiaName.components(separatedBy: " ").first ?? ""
+                return [gaiaName, givenName].filter { !$0.isEmpty }
+            }
+        ]
+
+        for pass in passes {
+            for (directory, info) in profiles where pass(info).contains(profileName) {
                 return directory
             }
         }
