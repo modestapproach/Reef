@@ -27,6 +27,9 @@ struct PreferencesShortcutsView: View {
         if !modifierManager.profileEnabled {
             disabledCapabilities.append("profile switching")
         }
+        if !modifierManager.exposeEnabled {
+            disabledCapabilities.append("window exposé")
+        }
 
         guard !disabledCapabilities.isEmpty else {
             return nil
@@ -102,6 +105,15 @@ struct PreferencesShortcutsView: View {
                         Toggle("", isOn: $modifierManager.bindShift).toggleStyle(.checkbox)
                         Toggle("", isOn: $modifierManager.bindCommand).toggleStyle(.checkbox)
                     }
+
+                    GridRow {
+                        Text(verbatim: "Window exposé")
+                            .frame(minWidth: 150, alignment: .leading)
+                        Toggle("", isOn: $modifierManager.exposeControl).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.exposeOption).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.exposeShift).toggleStyle(.checkbox)
+                        Toggle("", isOn: $modifierManager.exposeCommand).toggleStyle(.checkbox)
+                    }
                 }
                 .padding(.vertical, 8)
 
@@ -122,7 +134,7 @@ struct PreferencesShortcutsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: !modifierManager.activateEnabled || !modifierManager.bindEnabled || !modifierManager.profileEnabled ? 395 : 360)
+        .frame(height: !modifierManager.activateEnabled || !modifierManager.bindEnabled || !modifierManager.profileEnabled || !modifierManager.exposeEnabled ? 430 : 395)
         .alert("Reset shortcut modifiers?", isPresented: $showingResetConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) {
@@ -135,6 +147,7 @@ struct PreferencesShortcutsView: View {
             Activate:\t\t⌃
             Profile:\t\t⌃ + ⌥
             Bind:\t\t⌃ + ⌥ + ⇧
+            Exposé:\t\t⌃ + ⌘
             """)
             .font(.system(.body, design: .monospaced))
         }

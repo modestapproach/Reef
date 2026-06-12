@@ -55,15 +55,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static private(set) var modifierManager: ModifierManager!
     
     private var cycleController: CyclePanelController!
+    private var exposeController: ExposePanelController!
     private var shortcutManager: ShortcutController!
     private var windowManager: PreferencesController!
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         AppDelegate.modifierManager = ModifierManager()
-        
+
         cycleController = CyclePanelController()
-        shortcutManager = ShortcutController(cycleController, AppDelegate.profileManager)
+        exposeController = ExposePanelController()
+        shortcutManager = ShortcutController(cycleController, exposeController, AppDelegate.profileManager)
         windowManager = PreferencesController()
         
         NSApp.setActivationPolicy(.accessory)

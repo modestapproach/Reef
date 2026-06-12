@@ -52,9 +52,24 @@ final class ModifierManager: ObservableObject {
         didSet { updateShortcuts() }
     }
 
+    @AppStorage("exposeEnabled") private var exposeEnabledStored = true
+    @AppStorage("exposeControl") var exposeControl = true {
+        didSet { updateShortcuts() }
+    }
+    @AppStorage("exposeOption") var exposeOption = false {
+        didSet { updateShortcuts() }
+    }
+    @AppStorage("exposeCommand") var exposeCommand = true {
+        didSet { updateShortcuts() }
+    }
+    @AppStorage("exposeShift") var exposeShift = false {
+        didSet { updateShortcuts() }
+    }
+
     var bindEnabled: Bool { !bindModifiers.isEmpty }
     var activateEnabled: Bool { !activateModifiers.isEmpty }
     var profileEnabled: Bool { !profileModifiers.isEmpty }
+    var exposeEnabled: Bool { !exposeModifiers.isEmpty }
 
     
     init() {
@@ -86,6 +101,15 @@ final class ModifierManager: ObservableObject {
         if profileOption { modifiers.insert(.option) }
         if profileCommand { modifiers.insert(.command) }
         if profileShift { modifiers.insert(.shift) }
+        return modifiers
+    }
+
+    var exposeModifiers: NSEvent.ModifierFlags {
+        var modifiers: NSEvent.ModifierFlags = []
+        if exposeControl { modifiers.insert(.control) }
+        if exposeOption { modifiers.insert(.option) }
+        if exposeCommand { modifiers.insert(.command) }
+        if exposeShift { modifiers.insert(.shift) }
         return modifiers
     }
     
@@ -131,19 +155,27 @@ final class ModifierManager: ObservableObject {
         bindOption = true
         bindShift = true
         bindCommand = false
+
+        exposeControl = true
+        exposeOption = false
+        exposeShift = false
+        exposeCommand = true
     }
-    
+
     private func updateShortcuts() {
         let bindMods = bindModifiers
         let activateMods = activateModifiers
         let profileMods = profileModifiers
+        let exposeMods = exposeModifiers
         let bindIsEnabled = !bindMods.isEmpty
         let activateIsEnabled = !activateMods.isEmpty
         let profileIsEnabled = !profileMods.isEmpty
+        let exposeIsEnabled = !exposeMods.isEmpty
 
         bindEnabledStored = bindIsEnabled
         activateEnabledStored = activateIsEnabled
         profileEnabledStored = profileIsEnabled
+        exposeEnabledStored = exposeIsEnabled
 
         for number in 0...9 {
             KeyboardShortcuts.setShortcut(
@@ -159,6 +191,11 @@ final class ModifierManager: ObservableObject {
             KeyboardShortcuts.setShortcut(
                 profileIsEnabled ? .init(numberKeys[number], modifiers: profileMods) : nil,
                 for: .profileShortcuts[number]
+            )
+
+            KeyboardShortcuts.setShortcut(
+                exposeIsEnabled ? .init(numberKeys[number], modifiers: exposeMods) : nil,
+                for: .exposeShortcuts[number]
             )
         }
     }
