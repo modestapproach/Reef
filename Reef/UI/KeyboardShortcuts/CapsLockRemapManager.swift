@@ -39,10 +39,10 @@ final class CapsLockRemapManager: ObservableObject {
         if defaults.object(forKey: "capsLockOption") == nil || defaults.bool(forKey: "capsLockOption") {
             flags.insert(.maskAlternate)
         }
-        if defaults.object(forKey: "capsLockShift") == nil || defaults.bool(forKey: "capsLockShift") {
+        if defaults.bool(forKey: "capsLockShift") {
             flags.insert(.maskShift)
         }
-        if defaults.object(forKey: "capsLockCommand") == nil || defaults.bool(forKey: "capsLockCommand") {
+        if defaults.bool(forKey: "capsLockCommand") {
             flags.insert(.maskCommand)
         }
         return flags

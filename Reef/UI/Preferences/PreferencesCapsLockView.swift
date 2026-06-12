@@ -12,8 +12,8 @@ struct PreferencesCapsLockView: View {
     @AppStorage("capsLockRemapEnabled") private var remapEnabled = false
     @AppStorage("capsLockControl") private var capsControl = true
     @AppStorage("capsLockOption") private var capsOption = true
-    @AppStorage("capsLockShift") private var capsShift = true
-    @AppStorage("capsLockCommand") private var capsCommand = true
+    @AppStorage("capsLockShift") private var capsShift = false
+    @AppStorage("capsLockCommand") private var capsCommand = false
 
     @StateObject private var manager: CapsLockRemapManager = {
         if let manager = AppDelegate.capsLockManager {

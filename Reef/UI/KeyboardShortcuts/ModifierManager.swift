@@ -17,7 +17,7 @@ final class ModifierManager: ObservableObject {
     @AppStorage("bindOption") var bindOption = true {
         didSet { updateShortcuts() }
     }
-    @AppStorage("bindCommand") var bindCommand = false {
+    @AppStorage("bindCommand") var bindCommand = true {
         didSet { updateShortcuts() }
     }
     @AppStorage("bindShift") var bindShift = true {
@@ -28,7 +28,7 @@ final class ModifierManager: ObservableObject {
     @AppStorage("activateControl") var activateControl = true {
         didSet { updateShortcuts() }
     }
-    @AppStorage("activateOption") var activateOption = false {
+    @AppStorage("activateOption") var activateOption = true {
         didSet { updateShortcuts() }
     }
     @AppStorage("activateCommand") var activateCommand = false {
@@ -48,15 +48,15 @@ final class ModifierManager: ObservableObject {
     @AppStorage("profileCommand") var profileCommand = false {
         didSet { updateShortcuts() }
     }
-    @AppStorage("profileShift") var profileShift = false {
+    @AppStorage("profileShift") var profileShift = true {
         didSet { updateShortcuts() }
     }
 
     @AppStorage("exposeEnabled") private var exposeEnabledStored = true
-    @AppStorage("exposeControl") var exposeControl = true {
+    @AppStorage("exposeControl") var exposeControl = false {
         didSet { updateShortcuts() }
     }
-    @AppStorage("exposeOption") var exposeOption = false {
+    @AppStorage("exposeOption") var exposeOption = true {
         didSet { updateShortcuts() }
     }
     @AppStorage("exposeCommand") var exposeCommand = true {
@@ -142,22 +142,22 @@ final class ModifierManager: ObservableObject {
 
     func resetToDefaults() {
         activateControl = true
-        activateOption = false
+        activateOption = true
         activateShift = false
         activateCommand = false
 
         profileControl = true
         profileOption = true
-        profileShift = false
+        profileShift = true
         profileCommand = false
 
         bindControl = true
         bindOption = true
         bindShift = true
-        bindCommand = false
+        bindCommand = true
 
-        exposeControl = true
-        exposeOption = false
+        exposeControl = false
+        exposeOption = true
         exposeShift = false
         exposeCommand = true
     }

@@ -175,10 +175,10 @@ struct PreferencesShortcutsView: View {
             Text(verbatim: """
             Modifiers will be reset to
 
-            Exposé:\t\t⌃ + ⌘
-            Fast:\t\t⌃
-            Profile:\t\t⌃ + ⌥
-            Bind:\t\t⌃ + ⌥ + ⇧
+            Exposé:\t\t⌥ + ⌘
+            Fast:\t\t⌃ + ⌥
+            Profile:\t\t⌃ + ⌥ + ⇧
+            Bind:\t\t⌃ + ⌥ + ⇧ + ⌘
             """)
             .font(.system(.body, design: .monospaced))
         }
